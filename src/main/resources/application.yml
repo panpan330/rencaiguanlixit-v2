@@ -19,3 +19,9 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # ?????? SQL ?????????
     map-underscore-to-camel-case: true # ?????????????? Java ?????
 
+# 自定义 JWT 配置
+jwt:
+  # 256-bit 随机乱码密钥
+  secret: 4Z5c8e2g5j8x/A?D(G+KbPeShVmYq3t6w9z$B&E)H@McQfTjWnZr4u7x!A%D*F-J
+  # 过期时间（毫秒），这里写的是 7 天
+  expire-time: 604800000
