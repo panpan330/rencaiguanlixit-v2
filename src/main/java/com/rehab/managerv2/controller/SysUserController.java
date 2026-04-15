@@ -5,6 +5,7 @@ import com.rehab.managerv2.entity.SysUser;
 import com.rehab.managerv2.service.SysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import java.util.List;
 
@@ -16,9 +17,18 @@ public class SysUserController {
     private SysUserService sysUserService;
 
     @GetMapping("/list")
-    public Result<List<SysUser>> getUserList() {
-        // 把查出来的列表塞进 success 包装盒
-        return Result.success(sysUserService.list());
+    public Result<Page<SysUser>> getUserPage(
+            @RequestParam(defaultValue = "1") Integer pageNo,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+
+        // 1. 构造分页参数对象
+        Page<SysUser> pageParam = new Page<>(pageNo, pageSize);
+
+        // 2. 调用 MyBatis-Plus 的分页查询方法
+        Page<SysUser> resultPage = sysUserService.page(pageParam);
+
+        // 3. 把查出来的分页结果包装进咱们的大厂包装盒里返回
+        return Result.success(resultPage);
     }
 
     @PostMapping("/add")
