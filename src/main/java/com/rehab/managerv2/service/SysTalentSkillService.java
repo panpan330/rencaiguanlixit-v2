@@ -12,5 +12,9 @@ import com.baomidou.mybatisplus.extension.service.IService;
  * @since 2026-04-16
  */
 public interface SysTalentSkillService extends IService<SysTalentSkill> {
+    /**
+     * 根据人才 ID 查询真实的五维技能分数
+     */
+    SysTalentSkill getSkillByTalentId(Long talentId);
 
 }
