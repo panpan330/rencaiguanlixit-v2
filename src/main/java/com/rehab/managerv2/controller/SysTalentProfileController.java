@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.URLEncoder;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/sys-talent-profile")
@@ -70,4 +71,13 @@ public class SysTalentProfileController {
                 .sheet("人才数据")
                 .doWrite(list);
     }
+    /**
+     * 🔥 规范化后的接口：Controller 只负责接收请求和返回响应
+     */
+    @PostMapping("/smart-match")
+    public Result smartMatch(@RequestBody Map<String, Integer> weights) {
+        // 一行代码搞定，所有的复杂性都隐藏在了 Service 内部
+        return Result.success(sysTalentProfileService.calculateSmartMatch(weights));
+    }
+
 }
