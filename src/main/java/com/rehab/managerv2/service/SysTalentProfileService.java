@@ -3,6 +3,7 @@ package com.rehab.managerv2.service;
 import com.rehab.managerv2.entity.SysTalentProfile;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -21,5 +22,6 @@ public interface SysTalentProfileService extends IService<SysTalentProfile> {
      * @return 计算后的 Top 3 推荐列表
      */
     List<Map<String, Object>> calculateSmartMatch(Map<String, Integer> weights);
+    void exportDataToStream(OutputStream outputStream);
 
 }

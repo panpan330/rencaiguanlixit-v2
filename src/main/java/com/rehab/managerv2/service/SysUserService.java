@@ -13,4 +13,17 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface SysUserService extends IService<SysUser> {
 
+    /**
+     * 用户登录，返回 JWT Token
+     * @param loginUser 包含用户名和密码
+     * @return JWT Token
+     */
+    String login(SysUser loginUser);
+
+    /**
+     * 新增用户，包含密码加密逻辑
+     * @param sysUser 用户信息
+     * @return 是否成功
+     */
+    boolean saveUserWithEncryption(SysUser sysUser);
 }

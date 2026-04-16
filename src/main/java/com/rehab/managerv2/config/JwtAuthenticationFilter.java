@@ -15,34 +15,44 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 /**
- * JWT 保安：拦截每一个请求，检查通行证
+ * 真正适配 Spring Security 的 JWT 保安
+ * 继承 OncePerRequestFilter 确保每次请求只过滤一次
  */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        // 1. 从 HTTP 请求头中获取名为 "Authorization" 的字段
-        String header = request.getHeader("Authorization");
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
-        // 2. 国际惯例：JWT 的 Token 通常以 "Bearer " 开头
-        if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
-            // 剔除前缀，只保留后面的乱码字符串
-            String token = header.substring(7);
+        // 1. 获取我们 Vue 前端发来的 token (注意：前端请求头里叫 'token')
+        String token = request.getHeader("token");
 
-            // 3. 呼叫“印钞机”验真伪
-            Claims claims = JwtUtils.getClaimsByToken(token);
-            if (claims != null) {
-                // 如果 Token 是真的，且没过期，拿到用户名
-                String username = claims.getSubject();
+        // 2. 如果存在 token，就开始验真伪
+        if (StringUtils.hasText(token)) {
+            try {
+                // 调用你的 JwtUtils 解析 token
+                Claims claims = JwtUtils.getClaimsByToken(token);
 
-                // 4. 重点：告诉 Spring Security 总部，这哥们身份合法，记录在案！
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                // 如果解析成功且没过期
+                if (claims != null) {
+                    String username = claims.getSubject();
+
+                    // 🔥 核心关键点：告诉 Spring Security "这个人是合法的！"
+                    // 必须把用户信息塞进 SecurityContext 里，否则 Spring Security 依然会报 403
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            } catch (Exception e) {
+                // 解析失败（比如被篡改或过期），什么都不做，让 SecurityContext 保持为空
+                // 这样后面的 Spring Security 就会自动拦截并返回 403
+                System.out.println("Token 解析异常：" + e.getMessage());
             }
         }
 
-        // 5. 检查完毕，放行（如果上面没通过，身份信息为空，后面会被总部拦死）
+        // 3. 无论如何，保安必须放行，让请求继续往下走。
+        // 如果没权限，走到后面的 Spring Security 拦截器时自然会被踹出去(报403)
         filterChain.doFilter(request, response);
     }
 }

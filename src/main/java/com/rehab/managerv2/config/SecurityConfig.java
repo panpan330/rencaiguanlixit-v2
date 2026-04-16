@@ -2,6 +2,8 @@ package com.rehab.managerv2.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -10,15 +12,17 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
- * Spring Security 核心规则配置（保安队规）
+ * Spring Security 核心规则配置（最强保安队规）
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // 把刚才那个 BCrypt 密码比对器注册成一个全局 Bean
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -27,20 +31,45 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 1. 禁用 CSRF 防护（因为我们要用纯正的 JWT，不需要这玩意）
+                // 1. 开启 Spring Security 官方跨域支持，它会自动去下面找 corsConfigurationSource
+                .cors(Customizer.withDefaults())
+
+                // 2. 禁用 CSRF
                 .csrf(AbstractHttpConfigurer::disable)
-                // 2. 禁用 Session（告诉服务器别拿小本本记名字了，全面启用无状态 JWT 模式）
+
+                // 3. 禁用 Session
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // 3. 核心：接口权限规则
+
+                // 4. 接口权限规则
                 .authorizeHttpRequests(auth -> auth
-                        // 给 /sys-user/login 接口开绿灯，任何人都能来尝试登录
-                        .requestMatchers("/sys-user/login").permitAll()
-                        // 其他所有请求，必须经过认真检查（带 Token）才能访问
+                        // 必须无条件放行 OPTIONS 预检请求
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // 放行登录等公共接口
+                        .requestMatchers("/sys-user/login", "/sys-user/add").permitAll()
+                        // 其他全部拦截
                         .anyRequest().authenticated()
                 )
-                // 4. 把咱们刚写的 JwtAuthenticationFilter 保安，安插在官方默认密码保安的最前面
+                // 5. 插入你的 JWT 过滤器
                 .addFilterBefore(new JwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * 🔥 官方指定的跨域规则：Spring Security 会自动调用这个 Bean 来处理跨域
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.addAllowedOriginPattern("*"); // 允许所有源
+        configuration.addAllowedMethod("*");        // 允许所有请求方法
+        configuration.addAllowedHeader("*");        // 允许所有请求头
+        configuration.setAllowCredentials(true);    // 允许携带凭证
+        configuration.setMaxAge(3600L);             // 缓存 1 小时
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // 映射到所有的接口路径
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

@@ -1,5 +1,6 @@
 package com.rehab.managerv2.service.impl;
 
+import com.alibaba.excel.EasyExcel;
 import com.rehab.managerv2.entity.SysTalentProfile;
 import com.rehab.managerv2.entity.SysTalentSkill;
 import com.rehab.managerv2.mapper.SysTalentProfileMapper;
@@ -9,6 +10,7 @@ import com.rehab.managerv2.service.SysTalentSkillService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -88,5 +90,16 @@ public class SysTalentProfileServiceImpl extends ServiceImpl<SysTalentProfileMap
     private String formatDomain(Integer domainId) {
         return domainId == 0 ? "计算机科学" : (domainId == 1 ? "康复医学" : "深度交叉");
     }
+    @Override
+    public void exportDataToStream(OutputStream outputStream) {
+        // 大厨负责查数据库
+        List<SysTalentProfile> list = this.list();
+
+        // 大厨负责调用 EasyExcel 写入数据流
+        EasyExcel.write(outputStream, SysTalentProfile.class)
+                .sheet("人才数据")
+                .doWrite(list);
+    }
+
 }
 
