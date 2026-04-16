@@ -1,5 +1,6 @@
 package com.rehab.managerv2.controller;
 
+import com.rehab.managerv2.annotation.Log;
 import com.rehab.managerv2.entity.SysTalentProfile;
 // 注意：这里最好统一使用 ISysTalentProfileService 接口
 import com.rehab.managerv2.service.SysTalentProfileService;
@@ -31,6 +32,7 @@ public class SysTalentProfileController {
                 Result.success("保存成功") : Result.error(500, "保存失败");
     }
 
+    @Log("删除人才档案")
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Long id) {
         return sysTalentProfileService.removeById(id) ?
