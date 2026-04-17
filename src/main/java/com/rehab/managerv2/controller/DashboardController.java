@@ -13,15 +13,14 @@ import java.util.Map;
  * 首页数据大屏控制器（极简规范版）
  */
 @RestController
-@RequestMapping("/dashboard")
+@RequestMapping("/api/dashboard")
 public class DashboardController {
 
     @Autowired
     private DashboardService dashboardService;
 
     @GetMapping("/stats")
-    public Result<Map<String, Long>> getStats() {
-        // 服务员只负责点菜、端菜，不管后厨怎么切菜
+    public Result<Map<String, Object>> getGlobalStats() {
         return Result.success(dashboardService.getGlobalStats());
     }
 }

@@ -17,4 +17,9 @@ public interface SysTalentSkillService extends IService<SysTalentSkill> {
      */
     SysTalentSkill getSkillByTalentId(Long talentId);
 
+    /**
+     * 智能一键评估人才技能
+     */
+    SysTalentSkill aiEvaluateSkill(Long talentId);
+
 }

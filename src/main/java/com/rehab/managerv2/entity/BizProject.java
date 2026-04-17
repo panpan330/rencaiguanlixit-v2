@@ -35,6 +35,12 @@ public class BizProject implements Serializable {
     private Long id;
 
     /**
+     * 关联sys_user表的账号ID
+     */
+    @TableField("user_id")
+    private Long userId;
+
+    /**
      * 项目名称(如：智能外骨骼研发)
      */
     @TableField("project_name")

@@ -48,6 +48,13 @@ public class SysTalentProfile implements Serializable {
     private String realName;
 
     /**
+     * 联系电话
+     */
+    @ExcelProperty("联系电话")
+    @TableField("phone")
+    private String phone;
+
+    /**
      * 主攻领域：0-计算机科学, 1-康复医学, 2-深度交叉
      */
     @ExcelProperty("主攻领域(0计科,1康复,2交叉)")

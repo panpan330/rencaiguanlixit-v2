@@ -62,5 +62,17 @@ public class BizMatchRecord implements Serializable {
     @TableField("create_time")
     private LocalDateTime createTime;
 
+    /**
+     * 临时字段：人才姓名
+     */
+    @TableField(exist = false)
+    private String talentName;
+
+    /**
+     * 临时字段：项目名称
+     */
+    @TableField(exist = false)
+    private String projectName;
+
 
 }

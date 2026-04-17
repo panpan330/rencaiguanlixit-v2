@@ -14,6 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.stream.Collectors;
+
 /**
  * <p>
  * 科研/企业项目表 服务实现类
@@ -51,10 +53,33 @@ public class BizProjectServiceImpl extends ServiceImpl<BizProjectMapper, BizProj
 
         // 2. 获取全库所有人才的技能分数 (算法输入向量 B 集合)
         List<SysTalentSkill> allSkills = skillService.list();
+        
+        // --- 核心修复：排除已删除人才、排除已邀请过的人才 ---
+        List<Long> validTalentIds = profileService.list().stream()
+                .map(SysTalentProfile::getId)
+                .collect(Collectors.toList());
+
+        QueryWrapper<BizMatchRecord> historyWrapper = new QueryWrapper<>();
+        historyWrapper.eq("project_id", projectId).gt("status", 0);
+        List<Long> excludeTalentIds = matchRecordService.list(historyWrapper).stream()
+                .map(BizMatchRecord::getTalentId)
+                .collect(Collectors.toList());
+        // --------------------------------------------------
+        
         List<Map<String, Object>> matchResults = new ArrayList<>();
 
         // 3. 执行核心算法：余弦相似度计算
         for (SysTalentSkill skill : allSkills) {
+            // 如果档案已被删除或者根本不存在，跳过
+            if (!validTalentIds.contains(skill.getTalentId())) {
+                continue;
+            }
+            
+            // 如果这个人已经有交互历史（发过邀请等），直接跳过，不再重新推荐
+            if (excludeTalentIds.contains(skill.getTalentId())) {
+                continue;
+            }
+
             double[] talentVector = {skill.getDevScore(), skill.getAlgoScore(), skill.getClinicalScore(), skill.getPhysioScore(), skill.getHardwareScore()};
             int score = calculateCosineSimilarity(projectVector, talentVector);
 
@@ -71,7 +96,12 @@ public class BizProjectServiceImpl extends ServiceImpl<BizProjectMapper, BizProj
         matchResults.sort((a, b) -> (Integer) b.get("score") - (Integer) a.get("score"));
         List<Map<String, Object>> top3 = matchResults.size() > 3 ? matchResults.subList(0, 3) : matchResults;
 
-        // 5. 结果落地：将 Top 3 写入匹配记录表，并发送站内信
+        // 5. 存入数据库前，先清除该项目历史的"未处理"推荐记录（防止重复推荐导致旧数据堆积）
+        QueryWrapper<BizMatchRecord> deleteWrapper = new QueryWrapper<>();
+        deleteWrapper.eq("project_id", projectId).eq("status", 0);
+        matchRecordService.remove(deleteWrapper);
+
+        // 6. 结果落地：将 Top 3 写入匹配记录表，状态初始为"已推荐"
         BizProject project = this.getById(projectId);
 
         for (Map<String, Object> result : top3) {
@@ -83,18 +113,8 @@ public class BizProjectServiceImpl extends ServiceImpl<BizProjectMapper, BizProj
             record.setProjectId(projectId);
             record.setTalentId(talentId);
             record.setMatchScore(score);
-            record.setStatus(0); // 0-已推荐
+            record.setStatus(0); // 0-已推荐 (等待项目方发送邀请)
             matchRecordService.save(record);
-
-            // 5.2 触发系统站内信 (sys_notice)
-            SysTalentProfile profile = profileService.getById(talentId);
-            SysNotice notice = new SysNotice();
-            notice.setNoticeTitle("【智能推荐】您有一个高匹配度项目待查看");
-            notice.setNoticeContent(String.format("尊敬的 %s，系统通过 AI 算法为您匹配了项目【%s】，您的综合契合度高达 %d%%，请尽快查看项目详情并决定是否接取！",
-                    profile != null ? profile.getRealName() : "专家", project.getProjectName(), score));
-            // 如果你的 userId 已经做好了关联，这里可以存 userId。目前先存 talentId 作为示意
-            notice.setReceiverId(talentId);
-            noticeService.save(notice);
         }
 
         // 返回成功匹配到了几个人

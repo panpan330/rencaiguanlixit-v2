@@ -62,6 +62,7 @@ public class SysTalentProfileServiceImpl extends ServiceImpl<SysTalentProfileMap
                 int finalScore = calculateCosineSimilarity(userVector, talentVector);
 
                 Map<String, Object> map = new HashMap<>();
+                map.put("id", profile.getId());
                 map.put("name", profile.getRealName());
                 map.put("domain", formatDomain(profile.getPrimaryDomain()));
                 map.put("desc", profile.getResearchDirection());

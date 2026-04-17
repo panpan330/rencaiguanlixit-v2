@@ -16,16 +16,16 @@ public class SysUserController {
     private SysUserService sysUserService;
 
     /**
-     * 🔥 登录接口：服务员只负责要 Token，具体怎么验明正身是后厨的事
+     * 🔥 登录接口：返回完整的用户身份信息和 Token
      */
     @PostMapping("/login")
-    public Result<String> login(@RequestBody SysUser loginUser) {
-        String token = sysUserService.login(loginUser);
-        if (token == null) {
+    public Result<java.util.Map<String, Object>> login(@RequestBody SysUser loginUser) {
+        java.util.Map<String, Object> userInfo = sysUserService.loginAndGetInfo(loginUser);
+        if (userInfo == null) {
             // 安全规范：登录失败时不明确告诉用户是账号错还是密码错，防止黑客暴力试探账号
             return Result.error(400, "账号或密码错误！");
         }
-        return Result.success(token);
+        return Result.success(userInfo);
     }
 
     /**
@@ -36,6 +36,19 @@ public class SysUserController {
             @RequestParam(defaultValue = "1") Integer pageNo,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         return Result.success(sysUserService.page(new Page<>(pageNo, pageSize)));
+    }
+
+    /**
+     * 根据角色类型获取用户列表（不分页，供下拉框使用）
+     */
+    @GetMapping("/listByRole")
+    public Result<java.util.List<SysUser>> getListByRole(@RequestParam Integer roleType) {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysUser> wrapper = 
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.eq(SysUser::getRoleType, roleType)
+               .eq(SysUser::getStatus, 0) // 仅查询状态正常的用户
+               .select(SysUser::getId, SysUser::getUsername, SysUser::getRealName); // 只返回必要字段
+        return Result.success(sysUserService.list(wrapper));
     }
 
     /**
@@ -57,5 +70,17 @@ public class SysUserController {
     public Result<Boolean> delete(@PathVariable Integer id) {
         return sysUserService.removeById(id) ?
                 Result.success(true) : Result.error(500, "删除失败");
+    }
+
+    /**
+     * 重置密码为默认值: 123456
+     */
+    @PutMapping("/reset-pwd/{id}")
+    public Result<Boolean> resetPwd(@PathVariable Long id) {
+        SysUser user = new SysUser();
+        user.setId(id);
+        user.setPassword("123456");
+        return sysUserService.saveUserWithEncryption(user) ? 
+                Result.success(true) : Result.error(500, "密码重置失败");
     }
 }

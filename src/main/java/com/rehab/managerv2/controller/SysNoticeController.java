@@ -24,9 +24,23 @@ public class SysNoticeController {
     private SysNoticeService noticeService;
 
     @GetMapping("/list")
-    public Result<List<SysNotice>> getList() {
-        // 服务员只负责向大厨要菜
-        return Result.success(noticeService.getNoticeList());
+    public Result<List<SysNotice>> getList(@RequestParam(required = false) Long talentId,
+                                           @RequestParam(required = false) Long userId) {
+        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<SysNotice> queryWrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+        
+        queryWrapper.and(wrapper -> {
+            wrapper.isNull("receiver_id"); // 广播消息所有人可见
+            if (talentId != null) {
+                wrapper.or().eq("receiver_id", talentId);
+            }
+            if (userId != null) {
+                // 根据 userId 查询，如果是发给该专家的通知，通常关联的是 userId
+                wrapper.or().eq("receiver_id", userId);
+            }
+        });
+        
+        queryWrapper.orderByDesc("create_time");
+        return Result.success(noticeService.list(queryWrapper));
     }
 
     @PutMapping("/read/{id}")

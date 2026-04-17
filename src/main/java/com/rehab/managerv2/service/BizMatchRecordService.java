@@ -5,11 +5,29 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import java.util.List;
 
 public interface BizMatchRecordService extends IService<BizMatchRecord> {
-
+    
     /**
-     * 根据项目ID，自动计算人才匹配度并生成推荐记录
-     * @param projectId 项目ID
-     * @return 匹配记录列表
+     * 为项目智能匹配候选人
      */
     List<BizMatchRecord> autoMatchTalents(Long projectId);
+
+    /**
+     * 获取项目的候选人记录
+     */
+    List<BizMatchRecord> getRecordsByProjectId(Long projectId);
+
+    /**
+     * 项目方主动发送邀请给推荐的人才
+     */
+    void sendInvitation(Long recordId);
+
+    /**
+     * 人才接受或拒绝邀请
+     */
+    void handleInvitation(Long recordId, Integer actionStatus);
+
+    /**
+     * 项目方取消与人才的合作
+     */
+    void cancelCooperation(Long recordId);
 }

@@ -20,16 +20,78 @@ public class SysTalentProfileController {
     @Autowired
     private SysTalentProfileService sysTalentProfileService;
 
+    @Autowired
+    private com.rehab.managerv2.service.SysTalentSkillService sysTalentSkillService;
+
     @GetMapping("/list")
-    public Result getList() {
-        return Result.success(sysTalentProfileService.list());
+    public Result getList(@RequestParam(required = false) Long expertId,
+                          @RequestParam(required = false) String role,
+                          @RequestParam(required = false) String realName,
+                          @RequestParam(required = false) Integer primaryDomain) {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysTalentProfile> wrapper = 
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        
+        // 核心逻辑：如果当前登录角色是教研专家，则只能查看属于他自己的学生档案
+        if ("expert".equals(role) && expertId != null) {
+            wrapper.eq(SysTalentProfile::getUserId, expertId);
+        }
+
+        // 处理查询参数
+        if (realName != null && !realName.isEmpty()) {
+            wrapper.like(SysTalentProfile::getRealName, realName);
+        }
+        if (primaryDomain != null) {
+            wrapper.eq(SysTalentProfile::getPrimaryDomain, primaryDomain);
+        }
+        
+        // 其他情况（如超级管理员），不做过滤，返回所有档案
+        return Result.success(sysTalentProfileService.list(wrapper));
+    }
+
+    @GetMapping("/{id}")
+    public Result getById(@PathVariable Long id) {
+        SysTalentProfile profile = sysTalentProfileService.getById(id);
+        return profile != null ? Result.success(profile) : Result.error(404, "未找到该档案");
     }
 
     @PostMapping("/save")
     public Result save(@RequestBody SysTalentProfile sysTalentProfile) {
-        // 🔥 优化：使用三元运算符，告别啰嗦的 if-else
-        return sysTalentProfileService.saveOrUpdate(sysTalentProfile) ?
-                Result.success("保存成功") : Result.error(500, "保存失败");
+        boolean isNew = (sysTalentProfile.getId() == null);
+        boolean success = sysTalentProfileService.saveOrUpdate(sysTalentProfile);
+        
+        if (success && isNew) {
+            // 当新增人才时，自动在数据库中生成默认的技能打分记录
+            com.rehab.managerv2.entity.SysTalentSkill defaultSkill = new com.rehab.managerv2.entity.SysTalentSkill();
+            defaultSkill.setTalentId(sysTalentProfile.getId());
+            defaultSkill.setDevScore(50);
+            defaultSkill.setAlgoScore(50);
+            defaultSkill.setClinicalScore(50);
+            defaultSkill.setPhysioScore(50);
+            defaultSkill.setHardwareScore(50);
+            defaultSkill.setStrongPoints("各方面能力较为基础，有待进一步提升");
+            sysTalentSkillService.save(defaultSkill);
+
+            // 自动为学生创建登录账号 (账号为手机号，密码默认为123456，角色为学生: 3)
+            if (sysTalentProfile.getPhone() != null && !sysTalentProfile.getPhone().isEmpty()) {
+                com.rehab.managerv2.entity.SysUser studentUser = new com.rehab.managerv2.entity.SysUser();
+                studentUser.setUsername(sysTalentProfile.getPhone());
+                studentUser.setRealName(sysTalentProfile.getRealName());
+                studentUser.setPhone(sysTalentProfile.getPhone());
+                studentUser.setRoleType(3); // 3-学生
+                // 为了避免依赖注入循环，我们可以直接利用 Spring 容器获取 SysUserService
+                com.rehab.managerv2.service.SysUserService sysUserService = 
+                    com.rehab.managerv2.common.SpringContextUtils.getBean(com.rehab.managerv2.service.SysUserService.class);
+                if (sysUserService != null) {
+                    try {
+                        sysUserService.saveUserWithEncryption(studentUser);
+                    } catch(Exception e) {
+                        // 忽略账号已存在的异常
+                    }
+                }
+            }
+        }
+        
+        return success ? Result.success("保存成功") : Result.error(500, "保存失败");
     }
 
     @Log("删除人才档案")

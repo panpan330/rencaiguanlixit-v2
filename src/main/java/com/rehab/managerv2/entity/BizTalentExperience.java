@@ -1,72 +1,36 @@
 package com.rehab.managerv2.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.IdType;
-import java.time.LocalDate;
 import com.baomidou.mybatisplus.annotation.TableId;
-import java.io.Serializable;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.experimental.Accessors;
 
-/**
- * <p>
- * 人才项目履历表
- * </p>
- *
- * @author author
- * @since 2026-04-16
- */
+import java.util.Date;
+
 @Data
-@EqualsAndHashCode(callSuper = false)
-@Accessors(chain = true)
 @TableName("biz_talent_experience")
-public class BizTalentExperience implements Serializable {
-
-    private static final long serialVersionUID = 1L;
-
-    /**
-     * 主键
-     */
-    @TableId(value = "id", type = IdType.AUTO)
+public class BizTalentExperience {
+    @TableId(type = IdType.AUTO)
     private Long id;
-
-    /**
-     * 人才档案ID
-     */
-    @TableField("talent_id")
+    
+    /** 人才档案ID */
     private Long talentId;
-
-    /**
-     * 单位/课题组名称
-     */
-    @TableField("organization")
+    
+    /** 单位/课题组名称 */
     private String organization;
-
-    /**
-     * 担任职务/角色
-     */
-    @TableField("position")
+    
+    /** 担任职务/角色 */
     private String position;
-
-    /**
-     * 工作内容详述
-     */
-    @TableField("description")
+    
+    /** 工作内容详述 */
     private String description;
-
-    /**
-     * 开始日期
-     */
-    @TableField("start_date")
-    private LocalDate startDate;
-
-    /**
-     * 结束日期
-     */
-    @TableField("end_date")
-    private LocalDate endDate;
-
-
+    
+    /** 开始日期 */
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
+    private Date startDate;
+    
+    /** 结束日期 */
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
+    private Date endDate;
 }

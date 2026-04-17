@@ -23,9 +23,34 @@ public class BizProjectController {
     private BizProjectService projectService;
 
     @GetMapping("/list")
-    public Result getList() {
-        // 查出所有项目
-        return Result.success(projectService.list());
+    public Result getList(@RequestParam(required = false) Long projectId,
+                          @RequestParam(required = false) String role,
+                          @RequestParam(required = false) Long userId,
+                          @RequestParam(required = false) Long talentId) {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BizProject> wrapper = 
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+            
+        // 如果是项目方，只能看自己创建的项目
+        if ("project".equals(role) && userId != null) {
+            wrapper.eq(BizProject::getUserId, userId);
+        }
+        
+        // 如果是学生端(talentId存在)，我们需要去查 biz_match_record 中他已接受 (status=3) 的项目
+        if ("student".equals(role) && talentId != null) {
+            com.rehab.managerv2.service.BizMatchRecordService matchService = 
+                com.rehab.managerv2.common.SpringContextUtils.getBean(com.rehab.managerv2.service.BizMatchRecordService.class);
+            java.util.List<com.rehab.managerv2.entity.BizMatchRecord> records = matchService.lambdaQuery()
+                    .eq(com.rehab.managerv2.entity.BizMatchRecord::getTalentId, talentId)
+                    .eq(com.rehab.managerv2.entity.BizMatchRecord::getStatus, 3)
+                    .list();
+            if (records.isEmpty()) {
+                return Result.success(new java.util.ArrayList<>()); // 没有参与的项目
+            }
+            java.util.List<Long> projectIds = records.stream().map(com.rehab.managerv2.entity.BizMatchRecord::getProjectId).collect(java.util.stream.Collectors.toList());
+            wrapper.in(BizProject::getId, projectIds);
+        }
+        
+        return Result.success(projectService.list(wrapper));
     }
 
     @PostMapping("/save")
@@ -33,6 +58,15 @@ public class BizProjectController {
         // 新增或修改项目
         return projectService.saveOrUpdate(project) ?
                 Result.success("保存成功") : Result.error(500, "保存失败");
+    }
+
+    @PostMapping("/update-status/{id}")
+    public Result updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+        BizProject project = new BizProject();
+        project.setId(id);
+        project.setStatus(status);
+        return projectService.updateById(project) ?
+                Result.success("状态更新成功") : Result.error(500, "状态更新失败");
     }
 
     @DeleteMapping("/{id}")

@@ -14,9 +14,14 @@ import com.baomidou.mybatisplus.extension.service.IService;
 public interface SysUserService extends IService<SysUser> {
 
     /**
-     * 用户登录，返回 JWT Token
+     * 用户登录，返回 JWT Token 和 角色等信息
      * @param loginUser 包含用户名和密码
-     * @return JWT Token
+     * @return 包含 Token 和 Role 的对象，失败返回 null
+     */
+    java.util.Map<String, Object> loginAndGetInfo(SysUser loginUser);
+
+    /**
+     * 保留兼容的旧 login 方法
      */
     String login(SysUser loginUser);
 
